@@ -1,6 +1,6 @@
 #! perl
 
-use 5.008008;
+use 5.006001;
 use strict;
 use warnings;
 use Geo::OSM::Tiles qw( :all );
@@ -13,8 +13,8 @@ use Getopt::Long;
 our $linkrgoffs = 350.0;
 
 our $usage = qq{Usage: 
-   $0 --latitude=d[:d] --longitude=d[:d] --zoom=z[:z] [--baseurl=url] [--destdir=dir]
-   $0 --link=url [--latitude=d[:d]] [--longitude=d[:d]] [--zoom=z[:z]] [--baseurl=url] [--destdir=dir]
+   $0 --latitude=d[:d] --longitude=d[:d] --zoom=z[:z] [--quiet] [--baseurl=url] [--destdir=dir]
+   $0 --link=url [--latitude=d[:d]] [--longitude=d[:d]] [--zoom=z[:z]] [--quiet] [--baseurl=url] [--destdir=dir]
 };
 
 our %opt = (
@@ -22,6 +22,7 @@ our %opt = (
     longitude => undef,
     zoom => undef,
     link => undef,
+    quiet => undef,
     baseurl => "http://tile.openstreetmap.org",
     destdir => cwd,
 );
@@ -29,7 +30,7 @@ our %opt = (
 die "$usage\n"
     unless GetOptions(\%opt,
                       "latitude=s", "longitude=s", "zoom=s", "link=s",
-                      "baseurl=s", "destdir=s") &&
+                      "quiet", "baseurl=s", "destdir=s") &&
            @ARGV == 0;
 
 sub parserealopt;
@@ -38,7 +39,7 @@ sub downloadtile;
 
 if ($opt{link}) {
     die "Invalid link: $opt{link}\n"
-	unless $opt{link} =~ /^http:\/\/.*\/\?lat=(-?[0-9]+(?:\.[0-9]+)?)\&lon=(-?[0-9]+(?:\.[0-9]+)?)\&zoom=([0-9]+)/;
+	unless $opt{link} =~ /^http:\/\/.*\/\?lat=(-?\d+(?:\.\d+)?)\&lon=(-?\d+(?:\.\d+)?)\&zoom=(\d+)/;
     my $lat = $1;
     my $lon = $2;
     my $zoom = $3;
@@ -67,12 +68,20 @@ our $baseurl = $opt{baseurl};
 our $destdir = $opt{destdir};
 
 for my $zoom ($zoommin..$zoommax) {
+
     my $txmin = lon2tilex($lonmin, $zoom);
     my $txmax = lon2tilex($lonmax, $zoom);
     # Note that y=0 is near lat=+85.0511 and y=max is near
     # lat=-85.0511, so lat2tiley is monotonically decreasing.
     my $tymin = lat2tiley($latmax, $zoom);
     my $tymax = lat2tiley($latmin, $zoom);
+
+    my $ntx = $txmax - $txmin + 1;
+    my $nty = $tymax - $tymin + 1;
+    printf "Download %d (%d x %d) tiles for zoom level %d ...\n",
+	$ntx*$nty, $ntx, $nty, $zoom
+	unless $opt{quiet};
+
     for my $tx ($txmin..$txmax) {
 	for my $ty ($tymin..$tymax) {
 	    downloadtile($lwpua, $tx, $ty, $zoom);
@@ -86,12 +95,15 @@ sub parserealopt
 {
     my ($optname) = @_;
 
+    die "$optname must be specified in the command line.\n"
+	unless defined($opt{$optname});
+
     if (ref($opt{$optname})) {
 	return @{$opt{$optname}};
     }
     else {
 	die "Invalid $optname: $opt{$optname}\n"
-	    unless $opt{$optname} =~ /^(-?\d+\.\d+)(?::(-?\d+\.\d+))?$/;
+	    unless $opt{$optname} =~ /^(-?\d+(?:\.\d+)?)(?::(-?\d+(?:\.\d+)?))?$/;
 	my ($min, $max) = ($1, $2);
 	$max = $min unless defined($max);
 
@@ -103,6 +115,9 @@ sub parserealopt
 sub parseintopt
 {
     my ($optname) = @_;
+
+    die "$optname must be specified in the command line.\n"
+	unless defined($opt{$optname});
 
     if (ref($opt{$optname})) {
 	return @{$opt{$optname}};
@@ -150,8 +165,7 @@ of the tiles are stored in a directory tree that mirrors the paths
 from the server.
 
 A bounding box of geographic coordinates and a range of zoom levels
-must be selected by command line options.  The script will download
-all map tiles within this bounding box for the given zoom levels.
+must be selected by command line options.
 
 =head1 COMMAND LINE OPTIONS
 
@@ -163,19 +177,19 @@ C<--link> must be specified.
 
 =head2 C<--latitude=latmin[:latmax]>
 
-Selects latitude of the bounding box of coordinates to download.  May
-be one single real value or two real values separated by a colon in
-the range C<-85.0511..85.0511>.  If given only one value, just the
-tile (or column of tiles) at this latitude will be downloaded.
+Selects the latitude of the bounding box of coordinates to download.
+May be one single real value or two real values separated by a colon
+in the range C<-85.0511..85.0511>.  If given only one value, just the
+tile (or row of tiles) at this latitude will be downloaded.
 
 Default: none
 
 =head2 C<--longitude=lonmin[:lonmax]>
 
-Selects longitude of the bounding box of coordinates to download.  May
-be one single real value or two real values separated by a colon in
-the range C<-180.0..180.0>.  If given only one value, just the tile
-(or row of tiles) at this longitude will be downloaded.
+Selects the longitude of the bounding box of coordinates to download.
+May be one single real value or two real values separated by a colon
+in the range C<-180.0..180.0>.  If given only one value, just the tile
+(or column of tiles) at this longitude will be downloaded.
 
 Default: none
 
@@ -185,6 +199,9 @@ Selects the range of zoom levels to download the map tiles for.  May
 be one single integer value or two integer values separated by a
 colon.  OpenStreetMap supports zoom levels in the range C<0..18>.
 (This depends on the base URL and is not enforced by this script.)
+
+Note that the number of tiles to download grows by a factor of up to
+four with each zoom level.
 
 Default: none
 
@@ -219,10 +236,15 @@ stored as C<dir/zoom/x/y.png>.
 
 Default: The current working directory.
 
+=head2 C<--quiet>
+
+Do not write any diagnostic messages.  Only fatal errors will be
+reported.
+
 =head1 EXAMPLE
 
 Select the region of interest in OSM's slippy map and follow the
-permalink in the lower left of the window.  We assume this permalink
+permalink in the lower left of the window.  Lets assume this permalink
 to be
 L<http://www.openstreetmap.org/?lat=49.5782&lon=11.0076&zoom=12&layers=B000FTF>.
 Then
@@ -230,6 +252,23 @@ Then
   downloadosmtiles.pl --link='http://www.openstreetmap.org/?lat=49.5782&lon=11.0076&zoom=12&layers=B000FTF' --zoom=5:18
 
 will download all tiles from zoom level 5 to 18 for this region.
+
+=head1 ENVIRONMENT
+
+=over
+
+=item http_proxy
+
+=item ftp_proxy
+
+=item xxx_proxy
+
+=item no_proxy
+
+These environment variables can be set to enable communication through
+a proxy server.  This is implemented by L<LWP::UserAgent>.
+
+=back
 
 =head1 BUGS
 
@@ -249,17 +288,9 @@ The bounding box selected by the C<--link> command line option does
 not always correspond to the current view in the slippy map.  The
 problem is that the permalink from the slippy map only contains one
 position and not the bounds of the current view.  The actual view of
-the slippy map depends on many factor, including the size of the
+the slippy map depends on many factors, including the size of the
 browser window.  Thus, there is not much that can be done about this
 issue.
-
-=item *
-
-The script lacks a progress indicator.  Selecting a large bounding box
-or a large range of zoom levels may result in a large number of tiles
-to be downloaded.  This may easily take half an hour or longer to
-download.  Since there is no progress indicator, the script seems to
-hang while it is actually working fine.
 
 =back
 
