@@ -32,7 +32,7 @@ documented in the OSM wiki, see the link below.
 
 require Exporter;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 our @ISA = qw(Exporter);
 
@@ -153,11 +153,11 @@ L<http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames>
 
 =head1 AUTHOR
 
-Rolf Krahl E<lt>rolf@rotkraut.deE<gt>
+Rolf Krahl E<lt>rotkraut@cpan.orgE<gt>
 
-=head1 COPYRIGHT AND LICENSE
+=head1 COPYRIGHT AND LICENCE
 
-Copyright (C) 2008 by Rolf Krahl
+Copyright (C) 2008-2010 by Rolf Krahl
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.8 or,

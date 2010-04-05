@@ -1,0 +1,34 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.63.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SHA1 d0d016681bc424bb9692fcc773c8d361f8950499 Changes
+SHA1 914826745584ce387c3aaa00b3f9f554f2650690 MANIFEST
+SHA1 2ab20bfd1353a8e5cb5c28cb770acffacd72c6d2 META.yml
+SHA1 5ac5b831b9c6ded52d9d927896aa65b0c8d6eaad Makefile.PL
+SHA1 b2c82ed2920784cb96cc2eab901400dfc172562a README
+SHA1 2e15ea693fd3c691b89e4ce420cad0d3ba466f5a TODO
+SHA1 5670bcca93303697a01fe4e195693d6b39742405 downloadosmtiles.pl
+SHA1 bacf05b7d938460387a83959fb6ca25a5e185199 lib/Geo/OSM/Tiles.pm
+SHA1 c407042d589675d4d2444df9e09bc1ccd2421ef4 t/00-signature.t
+SHA1 2ee5cd034f1b77c97d9905a3f4da59f91ec4de15 t/10-Geo-OSM-Tiles.t
+SHA1 52996a298f078209cf12b935f4c2f7ae0d5fbfe2 t/20-downloadosmtiles.t
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2.0.9 (GNU/Linux)
+
+iEYEARECAAYFAku51lAACgkQwdTX4v3PdIaxcQCgzeMFjOxw08YNTHsWE/FTtzMB
+VRcAoMUYuDqv3gmxwRBSjpPkSqrsmlHq
+=E8TU
+-----END PGP SIGNATURE-----

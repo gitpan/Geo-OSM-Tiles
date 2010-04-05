@@ -1,3 +1,7 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
 use Test::More;
 
 # Check whether we can reach the tile server first.  Otherwise it
@@ -15,11 +19,12 @@ if ($@) {
     plan skip_all => "could not reach tile server: $@";
 }
 else {
-    plan tests => 3 * 3 + 8;
+    plan tests => 3 * 3 + 10;
 }
 
 use Cwd qw(abs_path);
 use File::Temp qw(tempdir);
+use File::Spec;
 use File::Find;
 
 # you may switch off $cleanup for debugging this test script.
@@ -47,6 +52,12 @@ our $pngcount;
 our $dubiouscount;
 
 
+# check whether the script is properly placed where we expect it do be
+# and wheter it is executable.
+# 2 tests
+ok(-e $downloadosmtiles, "downloadosmtiles.pl is present");
+ok(-x $downloadosmtiles, "downloadosmtiles.pl is executable");
+
 # download single tiles for a bunch of positions
 # 3 * 3 tests
 {
@@ -72,17 +83,20 @@ our $dubiouscount;
 	my $lat = $_->{LAT};
 	my $lon = $_->{LON};
 	my $zoom = $_->{ZOOM};
-	my $res = system($downloadosmtiles, 
-			 "--latitude=$lat", "--longitude=$lon", "--zoom=$zoom",
-			 "--quiet", "--destdir=$testdir");
+	my @args = ( $downloadosmtiles, 
+		     "--latitude=$lat", "--longitude=$lon", "--zoom=$zoom",
+		     "--quiet", "--destdir=$testdir" );
+	@args = map { "\"$_\"" } @args
+	    if $^O =~ /^mswin/i;
+	my $res = system(@args);
 	is($res, 0, "return value from downloadosmtiles.pl");
 
 	$pngcount = 0;
-	find(\&countpng, "$testdir/$zoom");
+	find(\&countpng, File::Spec->catdir($testdir, $zoom));
 	is($pngcount, 1, "number of dowloaded tiles");
 
 	$dubiouscount = 0;
-	find({ wanted => \&cleantmp, bydepth => 1, no_chdir => 1 }, "$testdir")
+	find({ wanted => \&cleantmp, bydepth => 1, no_chdir => 1 }, $testdir)
 	    if $cleanup;
 	ok(!$dubiouscount, "dubious files found");
     }
@@ -93,31 +107,32 @@ our $dubiouscount;
 # 8 tests
 {
     my $link = 'http://openstreetmap.org/?lat=14.692&lon=-17.448&zoom=11&layers=B000FTF';
-
-    my $res = system($downloadosmtiles, 
-			 "--link=$link", "--zoom=11:13",
-			 "--quiet", "--destdir=$testdir");
+    my @args = ( $downloadosmtiles, "--link=$link", "--zoom=11:13", 
+		 "--quiet", "--destdir=$testdir" );
+    @args = map { "\"$_\"" } @args
+	if $^O =~ /^mswin/i;
+    my $res = system(@args);
     is($res, 0, "return value from downloadosmtiles.pl");
 
     $pngcount = 0;
-    find(\&countpng, "$testdir/11");
+    find(\&countpng, File::Spec->catdir($testdir, "11"));
     cmp_ok($pngcount, '>=', 9, "number of dowloaded tiles");
     cmp_ok($pngcount, '<=', 16, "number of dowloaded tiles");
 
     my $oldcount = $pngcount;
     $pngcount = 0;
-    find(\&countpng, "$testdir/12");
+    find(\&countpng, File::Spec->catdir($testdir, "12"));
     cmp_ok($pngcount, '>=', $oldcount, "number of dowloaded tiles");
     cmp_ok($pngcount, '<=', 4*$oldcount, "number of dowloaded tiles");
 
     $oldcount = $pngcount;
     $pngcount = 0;
-    find(\&countpng, "$testdir/13");
+    find(\&countpng, File::Spec->catdir($testdir, "13"));
     cmp_ok($pngcount, '>=', $oldcount, "number of dowloaded tiles");
     cmp_ok($pngcount, '<=', 4*$oldcount, "number of dowloaded tiles");
 
     $dubiouscount = 0;
-    find({ wanted => \&cleantmp, bydepth => 1, no_chdir => 1 }, "$testdir")
+    find({ wanted => \&cleantmp, bydepth => 1, no_chdir => 1 }, $testdir)
 	if $cleanup;
     ok(!$dubiouscount, "dubious files found");
 }
